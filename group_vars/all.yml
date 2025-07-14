@@ -1,0 +1,30 @@
+---
+# Nusatech Development Stack Configuration
+project_name: nusatech-devops
+docker_network: nusatech_devops_network
+
+# Base directories
+base_dir: /opt/{{ project_name }}
+data_dir: "{{ base_dir }}/data"
+config_dir: "{{ base_dir }}/config"
+logs_dir: "{{ base_dir }}/logs"
+
+# Domain configuration (from vault)
+domain: "{{ vault_domain }}"
+use_ssl: true
+ssl_email: "{{ vault_ssl_email }}"
+
+# Subdomains for services
+subdomains:
+  mattermost: "chat.{{ domain }}"
+  jenkins: "cicd.{{ domain }}"
+
+# Passwords (from vault)
+traefik_admin_password: "{{ vault_traefik_admin_password }}"
+jenkins_admin_password: "{{ vault_jenkins_admin_password }}"
+postgres_admin_password: "{{ vault_db_password }}"
+
+# Security settings
+firewall_enabled: true
+fail2ban_enabled: true
+auto_updates_enabled: true

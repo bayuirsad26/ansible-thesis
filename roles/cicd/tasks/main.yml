@@ -1,0 +1,41 @@
+---
+- name: Create CI/CD configuration directories on host
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ config_dir }}/jenkins"
+    - "{{ config_dir }}/mattermost"
+
+- name: Deploy CI/CD stack from template
+  ansible.builtin.template:
+    src: cicd-compose.yml.j2
+    dest: "{{ base_dir }}/cicd-compose.yml"
+    mode: '0644'
+
+- name: Start CI/CD services using Docker Compose
+  ansible.builtin.shell: |
+    cd {{ base_dir }}
+    docker compose -f cicd-compose.yml up -d
+  register: cicd_deploy
+  changed_when: cicd_deploy.rc == 0
+
+- name: Get Jenkins initial admin password
+  ansible.builtin.shell: >
+    docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+  register: jenkins_password
+  changed_when: false
+  ignore_errors: true
+
+- name: Display Jenkins initial password
+  ansible.builtin.debug:
+    msg: "Jenkins initial admin password: {{ jenkins_password.stdout }}"
+  when: jenkins_password.stdout is defined
+
+- name: Display Mattermost setup information
+  ansible.builtin.debug:
+    msg: |
+      Mattermost is now ready for initial setup!
+      Navigate to https://{{ subdomains.mattermost }} to complete setup.
+      The system will automatically configure the database connection.

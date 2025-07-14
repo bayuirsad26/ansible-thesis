@@ -1,0 +1,47 @@
+---
+- name: Deploy Traefik Reverse Proxy
+  hosts: devops_servers
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+
+  pre_tasks:
+    - name: Ensure Docker network exists
+      community.docker.docker_network:
+        name: "{{ docker_network }}"
+        driver: bridge
+
+    - name: Create base directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ base_dir }}"
+        - "{{ config_dir }}"
+
+  roles:
+    - proxy
+
+  post_tasks:
+    - name: Display Traefik information
+      ansible.builtin.debug:
+        msg: |
+          ✅ Traefik reverse proxy deployed successfully!
+
+          Dashboard: https://traefik.{{ domain }}
+          Credentials: admin / [configured password]
+
+          🚀 Features enabled:
+          - Automatic SSL certificates via Let's Encrypt
+          - HTTP to HTTPS redirection
+          - Security headers
+          - Docker service discovery
+
+          📋 DNS Requirements:
+          Ensure these subdomains point to {{ ansible_host }}:
+          - traefik.{{ domain }}
+          - chat.{{ domain }} (for Mattermost)
+          - cicd.{{ domain }} (for Jenkins)

@@ -1,0 +1,81 @@
+---
+- name: Deploy CI/CD Stack (Jenkins, Mattermost, PostgreSQL)
+  hosts: devops_servers
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+
+  pre_tasks:
+    - name: Ensure Docker network exists
+      community.docker.docker_network:
+        name: "{{ docker_network }}"
+        driver: bridge
+
+    - name: Create CI/CD directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ base_dir }}"
+        - "{{ config_dir }}"
+        - "{{ config_dir }}/jenkins"
+        - "{{ config_dir }}/mattermost"
+
+  roles:
+    - cicd
+
+  post_tasks:
+    - name: Get Jenkins initial admin password
+      ansible.builtin.shell: >
+        docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+      register: jenkins_initial_password
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display CI/CD stack information
+      ansible.builtin.debug:
+        msg: |
+          ✅ CI/CD stack deployed successfully!
+
+          🔗 Service URLs (via Traefik):
+          - Jenkins: https://{{ subdomains.jenkins }}
+          - Mattermost: https://{{ subdomains.mattermost }}
+
+          🔑 Jenkins Setup:
+          - Initial Admin Password: {{ jenkins_initial_password.stdout | default('Check container logs') }}
+          - Navigate to Jenkins URL to complete setup
+          - Install suggested plugins
+          - Create admin user
+
+          💬 Mattermost Setup:
+          - Navigate to Mattermost URL
+          - Create admin account
+          - Setup team and channels
+          - Configure integrations with Jenkins
+
+          🗄️ Database:
+          - PostgreSQL running for Mattermost
+          - Database: mattermost
+          - User: admin
+
+          📋 CI/CD Features:
+          - Jenkins with Docker support
+          - Mattermost team collaboration
+          - PostgreSQL database
+          - Traefik reverse proxy integration
+          - Automatic SSL certificates
+
+          Resource Usage:
+          - Jenkins: {{ services.jenkins.memory_limit }} RAM, {{ services.jenkins.cpu_limit }} CPU
+          - Mattermost: {{ services.mattermost.memory_limit }} RAM, {{ services.mattermost.cpu_limit }} CPU
+          - PostgreSQL: 512m RAM, 0.5 CPU
+
+          💡 Next Steps:
+          1. Complete Jenkins initial setup via web interface
+          2. Install Jenkins plugins (Docker, GitLab, etc.)
+          3. Setup Mattermost team and configure webhooks
+          4. Create Jenkins pipelines for your projects
+          5. Configure Mattermost-Jenkins integration for notifications

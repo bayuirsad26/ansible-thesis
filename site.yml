@@ -1,0 +1,33 @@
+---
+- name: Deploy Nusatech Development Stack
+  hosts: devops_servers
+  become: true
+  gather_facts: true
+  vars_files:
+    - group_vars/all.yml
+    - group_vars/vault.yml
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install required system packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - wget
+          - git
+          - htop
+          - vim
+          - ufw
+          - fail2ban
+          - unattended-upgrades
+        state: present
+
+  roles:
+    - container
+    - security
+    - proxy
+    - cicd

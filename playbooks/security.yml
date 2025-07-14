@@ -1,0 +1,50 @@
+---
+- name: Configure Security (UFW, Fail2ban, Auto-updates)
+  hosts: devops_servers
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/vault.yml
+
+  pre_tasks:
+    - name: Install security packages
+      ansible.builtin.apt:
+        name:
+          - ufw
+          - fail2ban
+          - unattended-upgrades
+        state: present
+        update_cache: true
+
+  roles:
+    - security
+
+  post_tasks:
+    - name: Check UFW status
+      ansible.builtin.command: ufw status
+      register: ufw_status
+      changed_when: false
+      when: firewall_enabled
+
+    - name: Check fail2ban status
+      ansible.builtin.command: fail2ban-client status
+      register: fail2ban_status
+      changed_when: false
+      when: fail2ban_enabled
+
+    - name: Display security configuration
+      ansible.builtin.debug:
+        msg: |
+          ✅ Security configuration completed!
+
+          UFW Firewall: {{ 'Enabled' if firewall_enabled else 'Disabled' }}
+          Fail2ban: {{ 'Enabled' if fail2ban_enabled else 'Disabled' }}
+          Auto-updates: {{ 'Enabled' if auto_updates_enabled else 'Disabled' }}
+
+          Allowed ports:
+          - 22 (SSH)
+          - 80 (HTTP)
+          - 443 (HTTPS)
+
+          🔒 Your server is now secured with industry best practices!

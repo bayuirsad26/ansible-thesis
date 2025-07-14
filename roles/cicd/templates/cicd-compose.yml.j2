@@ -1,0 +1,74 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:2.504.3-lts
+    container_name: jenkins
+    restart: unless-stopped
+    networks:
+      - "{{ docker_network }}"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+    environment:
+      - JENKINS_OPTS="--httpPort={{ services.jenkins.port }}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jenkins.rule=Host(`{{ subdomains.jenkins }}`)"
+      - "traefik.http.routers.jenkins.entrypoints=websecure"
+      - "traefik.http.routers.jenkins.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jenkins.loadbalancer.server.port={{ services.jenkins.port }}"
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:10.9.1
+    container_name: mattermost
+    restart: unless-stopped
+    networks:
+      - "{{ docker_network }}"
+    volumes:
+      - mattermost_config:/mattermost/config
+      - mattermost_data:/mattermost/data
+      - mattermost_logs:/mattermost/logs
+      - mattermost_plugins:/mattermost/plugins
+      - mattermost_client_plugins:/mattermost/client/plugins
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://admin:{{ postgres_admin_password }}@postgres:5432/mattermost?sslmode=disable
+      - MM_SERVICESETTINGS_SITEURL=https://{{ subdomains.mattermost }}
+      - MM_SERVICESETTINGS_LISTENADDRESS=:{{ services.mattermost.port }}
+      - MM_TEAMSETTINGS_SITENAME=Nusatech Development
+      - MM_TEAMSETTINGS_MAXUSERSPERTEAM=50
+      - MM_FILESETTINGS_DRIVERNAME=local
+      - MM_FILESETTINGS_DIRECTORY=/mattermost/data/
+    user: "2000:2000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mattermost.rule=Host(`{{ subdomains.mattermost }}`)"
+      - "traefik.http.routers.mattermost.entrypoints=websecure"
+      - "traefik.http.routers.mattermost.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mattermost.loadbalancer.server.port={{ services.mattermost.port }}"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17.5-alpine
+    container_name: postgres
+    restart: unless-stopped
+    networks:
+      - "{{ docker_network }}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD={{ postgres_admin_password }}
+      - POSTGRES_DB=mattermost
+
+networks:
+  "{{ docker_network }}":
+    external: true
+
+volumes:
+  jenkins_data:
+  mattermost_config:
+  mattermost_data:
+  mattermost_logs:
+  mattermost_plugins:
+  mattermost_client_plugins:
+  postgres_data:
