@@ -9,12 +9,14 @@ services:
       - jenkins_data:/var/jenkins_home
     environment:
       - JENKINS_OPTS="--httpPort={{ services.jenkins.port }}"
+      - JENKINS_ARGS="--prefix=/jenkins"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jenkins.rule=Host(`{{ subdomains.jenkins }}`)"
       - "traefik.http.routers.jenkins.entrypoints=websecure"
-      - "traefik.http.routers.jenkins.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jenkins.tls.certresolver=myresolver"
       - "traefik.http.services.jenkins.loadbalancer.server.port={{ services.jenkins.port }}"
+      - "traefik.http.routers.jenkins.middlewares=jenkins-headers@file"
 
   mattermost:
     image: mattermost/mattermost-team-edition:10.9.1
@@ -42,7 +44,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.mattermost.rule=Host(`{{ subdomains.mattermost }}`)"
       - "traefik.http.routers.mattermost.entrypoints=websecure"
-      - "traefik.http.routers.mattermost.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.mattermost.tls.certresolver=myresolver"
       - "traefik.http.services.mattermost.loadbalancer.server.port={{ services.mattermost.port }}"
     depends_on:
       - postgres

@@ -10,6 +10,24 @@ http:
         contentTypeNosniff: true
         frameDeny: true
         sslRedirect: true
+        # Add these headers for Jenkins CSRF support
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-For: ""
+          X-Real-IP: ""
+        customResponseHeaders:
+          X-Frame-Options: "SAMEORIGIN"
+
+    # New middleware specifically for Jenkins
+    jenkins-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Port: "443"
+          X-Forwarded-Host: "{{ subdomains.jenkins }}"
+        frameDeny: false
+        customResponseHeaders:
+          X-Frame-Options: "SAMEORIGIN"
 
     dashboard-auth:
       basicAuth:

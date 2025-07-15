@@ -19,6 +19,16 @@ subdomains:
   mattermost: "chat.{{ domain }}"
   jenkins: "cicd.{{ domain }}"
 
+# Resource allocation (optimized for 6GB RAM)
+services:
+  traefik:
+
+  mattermost:
+    port: 8065
+
+  jenkins:
+    port: 8080
+
 # Passwords (from vault)
 traefik_admin_password: "{{ vault_traefik_admin_password }}"
 jenkins_admin_password: "{{ vault_jenkins_admin_password }}"

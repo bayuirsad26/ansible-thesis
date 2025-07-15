@@ -68,11 +68,6 @@
           - Traefik reverse proxy integration
           - Automatic SSL certificates
 
-          Resource Usage:
-          - Jenkins: {{ services.jenkins.memory_limit }} RAM, {{ services.jenkins.cpu_limit }} CPU
-          - Mattermost: {{ services.mattermost.memory_limit }} RAM, {{ services.mattermost.cpu_limit }} CPU
-          - PostgreSQL: 512m RAM, 0.5 CPU
-
           💡 Next Steps:
           1. Complete Jenkins initial setup via web interface
           2. Install Jenkins plugins (Docker, GitLab, etc.)
