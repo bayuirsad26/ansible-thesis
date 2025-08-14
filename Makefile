@@ -19,7 +19,7 @@ install: ## Install Ansible collections and dependencies
 	ansible-galaxy collection install -r $(REQUIREMENTS)
 
 setup: install ## Complete setup including SSH key verification
-	@echo "🚀 Setting up SummitEthic DevOps environment..."
+	@echo "🚀 Setting up Nusatech Development DevOps environment..."
 	@if [ ! -f ~/.ssh/summitethic-admin ]; then \
 		echo "❌ SSH key ~/.ssh/summitethic-admin not found!"; \
 		echo "Please ensure your SSH private key is in place."; \
@@ -46,7 +46,7 @@ deploy-cicd: ## Deploy CI/CD stack (Jenkins, Mattermost, PostgreSQL)
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK_DIR)/cicd.yml
 
 full-deploy: ## Complete deployment of entire stack
-	@echo "🚀 Starting full SummitEthic DevOps stack deployment..."
+	@echo "🚀 Starting full Nusatech Development DevOps stack deployment..."
 	ansible-playbook -i $(INVENTORY) site.yml
 
 deploy: full-deploy ## Alias for full-deploy
@@ -141,10 +141,10 @@ update-system: ## Update system packages on all hosts
 
 ## Information Targets
 info: ## Show deployment information
-	@echo "ℹ️  SummitEthic DevOps Stack Information"
+	@echo "ℹ️  Nusatech Development DevOps Stack Information"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "📋 Project: Nusatech DevOps Stack"
-	@echo "🏢 Company: SummitEthic"
+	@echo "🏢 Company: Nusatech Development"
 	@echo "🎯 Purpose: Ethical software development infrastructure"
 	@echo ""
 	@echo "🔧 Stack Components:"
@@ -162,7 +162,7 @@ info: ## Show deployment information
 	@echo "   • Mattermost: https://chat.your-domain.com"
 
 help: ## Show this help message
-	@echo "SummitEthic DevOps Stack - Makefile Commands"
+	@echo "Nusatech Development DevOps Stack - Makefile Commands"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "Built with ethical principles at the core 🌟"
 	@echo ""
