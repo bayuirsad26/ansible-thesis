@@ -21,32 +21,27 @@ Nusatech DevOps Stack adalah platform infrastruktur yang dirancang khusus untuk 
 
 ### Network Architecture Diagram
 
-![Network Architecture](diagram/network-architecture-diagram.png)
-
-*Gambar di atas menunjukkan arsitektur lengkap sistem Nusatech DevOps Stack dengan detail flow traffic dari Internet hingga ke individual services.*
-
-#### Arsitektur Flow Detail:
-
 ```mermaid
 graph TB
-    subgraph "Security Layer"
-        UFW[🔥 UFW Firewall<br/>Ports: 22, 80, 443]
-        Fail2ban[🛡️ Fail2ban<br/>SSH Protection]  
-        AutoUpdate[🔄 Auto Updates<br/>Security Patches]
-    end
-    
     Internet[🌐 Internet] --> LB[Load Balancer<br/>Traefik Proxy<br/>:80, :443]
     
     LB --> SSL{SSL Termination<br/>Let's Encrypt}
     
-    SSL --> |chat.domain.com| Mattermost[💬 Mattermost<br/>:8065]
-    SSL --> |cicd.domain.com| Jenkins[⚡ Jenkins CI/CD<br/>:8080]
     SSL --> |traefik.domain.com| Dashboard[📊 Traefik Dashboard]
+    SSL --> |cicd.domain.com| Jenkins[⚡ Jenkins CI/CD<br/>:8080]
+    SSL --> |chat.domain.com| Mattermost[💬 Mattermost<br/>:8065]
     
     subgraph "Docker Network: nusatech_devops_network"
-        Mattermost --> |Database Connection| PostgreSQL[(🗄️ PostgreSQL<br/>Database)]
-        Jenkins --> PostgreSQL
-        Jenkins --> DockerSocket[🐳 Docker Socket<br/>/var/run/docker.sock]
+        Jenkins --> |Database Connection| PostgreSQL[(🗄️ PostgreSQL<br/>Database)]
+        Mattermost --> PostgreSQL
+        
+        Jenkins --> Docker[🐳 Docker Socket<br/>/var/run/docker.sock]
+    end
+    
+    subgraph "Security Layer"
+        UFW[🔥 UFW Firewall<br/>Ports: 22, 80, 443]
+        Fail2ban[🛡️ Fail2ban<br/>SSH Protection]
+        AutoUpdate[🔄 Auto Updates<br/>Security Patches]
     end
     
     style LB fill:#e1f5fe
@@ -54,46 +49,21 @@ graph TB
     style Jenkins fill:#fff3e0
     style Mattermost fill:#e8f5e8
     style PostgreSQL fill:#fce4ec
-    style Dashboard fill:#f0f4c3
 ```
-
-#### Komponen Arsitektur:
-
-**🔒 Security Layer**
-- **UFW Firewall**: Mengizinkan hanya port 22 (SSH), 80 (HTTP), dan 443 (HTTPS)
-- **Fail2ban**: Perlindungan terhadap brute force attacks pada SSH
-- **Auto Updates**: Pembaruan keamanan otomatis untuk sistem operasi
-
-**🌐 Traffic Flow**
-- Internet traffic masuk melalui Traefik Proxy pada port 80/443
-- SSL termination menggunakan sertifikat Let's Encrypt
-- Routing berdasarkan subdomain ke service yang sesuai
-
-**🐳 Docker Network**
-- Semua services berjalan dalam isolated Docker network
-- Database sharing antara Jenkins dan Mattermost
-- Docker socket mounting untuk Jenkins CI/CD operations
 
 ### Service Architecture
 
-![Service Architecture](diagram/service-architecture-diagram.png)
-
-*Diagram di atas menunjukkan arsitektur berlapis (layered architecture) dari Nusatech DevOps Stack dengan pemisahan yang jelas antara Security, Infrastructure, Application, dan Proxy layers.*
-
-#### Layered Architecture Detail:
-
 ```mermaid
 graph LR
-    subgraph "Security Layer"
-        UFW[🔥 UFW Firewall]
-        Fail2ban[🛡️ Fail2ban IPS]
-        Vault[🔐 Ansible Vault<br/>Secret Management]
-    end
-    
     subgraph "Infrastructure Layer"
         Ubuntu[🖥️ Ubuntu Server<br/>6GB RAM, 50GB Storage]
         Docker[🐳 Docker Engine<br/>Container Runtime]
         Network[🔗 Docker Network<br/>nusatech_devops_network]
+    end
+    
+    subgraph "Proxy Layer"
+        Traefik[🌐 Traefik v3.4<br/>Reverse Proxy]
+        LetsEncrypt[🔐 Let's Encrypt<br/>SSL Certificates]
     end
     
     subgraph "Application Layer"
@@ -102,96 +72,46 @@ graph LR
         PostgreSQL[🗄️ PostgreSQL 17<br/>Database]
     end
     
-    subgraph "Proxy Layer"
-        Traefik[🌐 Traefik v3.4<br/>Reverse Proxy]
-        LetsEncrypt[🔐 Let's Encrypt<br/>SSL Certificates]
+    subgraph "Security Layer"
+        UFW[🔥 UFW Firewall]
+        Fail2ban[🛡️ Fail2ban IPS]
+        Vault[🔒 Ansible Vault<br/>Secret Management]
     end
     
     Ubuntu --> Docker
     Docker --> Network
+    Network --> Traefik
     Network --> Jenkins
     Network --> Mattermost
     Network --> PostgreSQL
-    Network --> Traefik
     Traefik --> LetsEncrypt
 ```
 
-#### Karakteristik Layer:
-
-**🔒 Security Layer**
-- **UFW Firewall**: Network-level protection dengan minimal port exposure
-- **Fail2ban IPS**: Intrusion Prevention System untuk SSH protection
-- **Ansible Vault**: Encrypted secret management dengan AES256
-
-**🏗️ Infrastructure Layer**
-- **Ubuntu Server**: Optimized untuk 6GB RAM dan 50GB storage
-- **Docker Engine**: Container runtime dengan logging configuration
-- **Docker Network**: Isolated network untuk inter-service communication
-
-**📱 Application Layer**
-- **Jenkins 2.504**: CI/CD platform dengan Docker support
-- **Mattermost 10.9**: Team collaboration platform
-- **PostgreSQL 17**: High-performance database backend
-
-**🌐 Proxy Layer**
-- **Traefik v3.4**: Modern reverse proxy dengan service discovery
-- **Let's Encrypt**: Automatic SSL certificate management
-
 ### Data Flow Diagram
-
-![Data Flow Diagram](diagram/data-flow-diagram.png)
-
-*Diagram di atas menunjukkan alur data lengkap dari Developer melalui Traefik Proxy ke berbagai services, termasuk interaksi database dan response flow yang detail.*
-
-#### Detailed Sequence Flow:
 
 ```mermaid
 sequenceDiagram
-    participant Dev as 👤 Developer
+    participant User as 👤 Developer
     participant Traefik as 🌐 Traefik Proxy
     participant Jenkins as ⚡ Jenkins
     participant Mattermost as 💬 Mattermost
     participant DB as 🗄️ PostgreSQL
     
-    Dev->>Traefik: HTTPS Request
+    User->>Traefik: HTTPS Request
     Note over Traefik: SSL Termination<br/>Security Headers
     
-    alt Jenkins Access (cicd.domain.com)
+    alt Jenkins Access
         Traefik->>Jenkins: Forward to :8080
-        Note over Jenkins: CI/CD Operations<br/>Build & Deploy
         Jenkins->>Traefik: Response
-    else Mattermost Access (chat.domain.com)
+    else Mattermost Access
         Traefik->>Mattermost: Forward to :8065
-        Note over Mattermost: Team Chat<br/>User Authentication
         Mattermost->>DB: Database Query
-        Note over DB: User Data<br/>Chat Messages<br/>Team Settings
         DB->>Mattermost: Data Response
         Mattermost->>Traefik: Response
     end
     
-    Traefik->>Dev: HTTPS Response
-    Note over Dev: Secured Content<br/>with TLS 1.3
+    Traefik->>User: HTTPS Response
 ```
-
-#### Request Flow Analysis:
-
-**🔐 SSL Termination & Security**
-- HTTPS requests diterima oleh Traefik pada port 443
-- SSL termination dengan Let's Encrypt certificates
-- Security headers ditambahkan (HSTS, XSS Protection, etc.)
-- Request routing berdasarkan subdomain
-
-**⚡ Jenkins Flow (cicd.domain.com)**
-- Direct forwarding ke Jenkins container port 8080
-- CI/CD operations: build, test, deploy
-- Docker socket access untuk container operations
-- Response dengan build status dan logs
-
-**💬 Mattermost Flow (chat.domain.com)**
-- Forwarding ke Mattermost container port 8065
-- Database interaction untuk user authentication
-- Chat message persistence dan retrieval
-- Real-time team collaboration features
 
 ---
 
@@ -419,12 +339,6 @@ make debug-cicd      # CI/CD debug
 
 ### Multi-Layer Security Architecture
 
-![Multi-Layer Security Architecture](diagram/multi-layer-security-diagram.png)
-
-*Diagram di atas menunjukkan implementasi Defense in Depth dengan 8 layer keamanan bertingkat, dari Internet Traffic hingga Secret Management level.*
-
-#### Security Flow Visualization:
-
 ```mermaid
 graph TD
     Internet[🌐 Internet Traffic] --> Firewall[🔥 UFW Firewall<br/>Ports: 22, 80, 443]
@@ -442,61 +356,7 @@ graph TD
     Container --> Network[🔗 Isolated Networks<br/>Docker Bridge]
     
     Network --> Secrets[🗝️ Secret Management<br/>Ansible Vault AES256]
-    
-    style Internet fill:#ffcdd2
-    style Firewall fill:#f8bbd9
-    style IPS fill:#e1bee7
-    style SSL fill:#c5cae9
-    style Headers fill:#bbdefb
-    style Auth fill:#b2dfdb
-    style Container fill:#c8e6c9
-    style Network fill:#dcedc8
-    style Secrets fill:#f0f4c3
 ```
-
-#### Defense in Depth Layers:
-
-**Layer 1: 🔥 Network Perimeter (UFW Firewall)**
-- Minimal attack surface dengan hanya 3 port terbuka
-- Stateful packet inspection
-- Default deny policy untuk incoming connections
-
-**Layer 2: 🛡️ Intrusion Prevention (Fail2ban IPS)**
-- Real-time SSH brute force detection
-- Automatic IP blocking untuk suspicious activities
-- Configurable ban time dan retry thresholds
-
-**Layer 3: 🔐 Transport Security (SSL Termination)**
-- TLS 1.3 dengan Let's Encrypt certificates
-- Automatic certificate renewal
-- Perfect Forward Secrecy (PFS) support
-
-**Layer 4: 📋 Application Security (Security Headers)**
-- HTTP Strict Transport Security (HSTS)
-- Cross-Site Scripting (XSS) protection
-- Content Type sniffing prevention
-- Clickjacking protection via X-Frame-Options
-
-**Layer 5: 🔑 Access Control (Authentication)**
-- Basic authentication untuk Traefik dashboard
-- Strong password policies
-- Session management dan timeout
-
-**Layer 6: 🐳 Container Security (Non-root Users)**
-- Principle of least privilege
-- Non-privileged container execution
-- Read-only filesystems where applicable
-- Resource limits dan quotas
-
-**Layer 7: 🔗 Network Isolation (Docker Bridge)**
-- Isolated Docker networks
-- Service-to-service communication control
-- Network segmentation untuk different tiers
-
-**Layer 8: 🗝️ Secret Management (Ansible Vault)**
-- AES256 encryption untuk sensitive data
-- Centralized secret management
-- Encryption at rest untuk configuration files
 
 ### Security Features
 
@@ -753,13 +613,6 @@ nusatech-devops-stack/
 ### Continuous Integration/Continuous Deployment
 
 #### CI/CD Pipeline Design
-
-![CI/CD Pipeline Design](diagram/cicd-pipeline-diagram.png)
-
-*Diagram di atas menunjukkan alur CI/CD pipeline lengkap dari Code Commit hingga Production Deploy dengan integrasi Mattermost notifications untuk setiap tahap critical.*
-
-#### Pipeline Flow Visualization:
-
 ```mermaid
 graph LR
     Code[📝 Code Commit] --> Build[🔨 Build & Test]
@@ -771,56 +624,7 @@ graph LR
     Security -.-> Notify[📢 Mattermost Notification]
     Test -.-> Notify
     Prod -.-> Notify
-    
-    style Code fill:#e3f2fd
-    style Build fill:#f3e5f5
-    style Security fill:#fff3e0
-    style Deploy fill:#e8f5e8
-    style Test fill:#fce4ec
-    style Prod fill:#f0f4c3
-    style Notify fill:#ffecb3
 ```
-
-#### Pipeline Stages Detail:
-
-**📝 Stage 1: Code Commit**
-- Git webhook triggers dari repository
-- Automatic branch detection dan validation
-- Code quality pre-checks
-
-**🔨 Stage 2: Build & Test**
-- Docker image building dengan multi-stage builds
-- Unit testing dan code coverage analysis
-- Artifact generation dan tagging
-
-**🔍 Stage 3: Security Scan**
-- Dependency vulnerability scanning
-- Container image security analysis
-- SAST (Static Application Security Testing)
-- **🔔 Notification**: Security scan results ke Mattermost
-
-**🚀 Stage 4: Deploy to Staging**
-- Automated deployment ke staging environment
-- Environment configuration validation
-- Health check verification
-
-**🧪 Stage 5: Integration Tests**
-- End-to-end testing pada staging environment
-- API testing dan performance validation
-- User acceptance testing (UAT)
-- **🔔 Notification**: Test results dan coverage reports
-
-**🌟 Stage 6: Production Deploy**
-- Blue-green deployment strategy
-- Zero-downtime deployment
-- Post-deployment validation
-- **🔔 Notification**: Deployment status dan metrics
-
-#### Notification Integration:
-- **Real-time Alerts**: Critical failures dan security issues
-- **Status Updates**: Build progress dan deployment status  
-- **Team Collaboration**: Code review requests dan approvals
-- **Metrics Reporting**: Performance dan quality metrics
 
 #### Quality Gates
 - Automated testing pada setiap commit
